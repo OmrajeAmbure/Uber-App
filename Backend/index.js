@@ -7,6 +7,7 @@ const userRoutes = require('../Backend/routes/user.routes');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./db/db');
 const { cookie } = require('express-validator');
+const captionRoute = require('./routes/caption.routes');
 connectDB();
 
 app.use(cors());
@@ -19,5 +20,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/users', userRoutes);
+
+app.use('/captions', captionRoute);
 
 module.exports = app;

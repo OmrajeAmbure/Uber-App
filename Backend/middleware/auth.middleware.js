@@ -1,6 +1,8 @@
 const userModel = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const blacklistedTokenModel = require('../models/blacklistToken.models');
+const captionModel = require('../models/captain.model');
 
 module.exports.authUser = async (req, res, next) => {
     try {
@@ -9,7 +11,7 @@ module.exports.authUser = async (req, res, next) => {
             req.cookies?.token || // Optional chaining for cookies
             (req.headers?.authorization?.startsWith('Bearer ') && req.headers.authorization.split(' ')[1]);
 
-        const isBlacklisted = await userModel.findOne({ token: token });
+        const isBlacklisted = await blacklistedTokenModel.findOne({ token: token });
         if(isBlacklisted){
             return res.status(401).json({message: 'Unauthorized: Token is blacklisted'});
         }
@@ -34,6 +36,28 @@ module.exports.authUser = async (req, res, next) => {
         return next();
     } catch (error) {
         console.error('Auth middleware error:', error.message); // Log error for debugging
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+};
+
+module.exports.authCaption = async (req, res, next) => {
+    const token = req.cookies?.token || (req.headers?.authorization?.startsWith('Bearer ') && req.headers.authorization.split(' ')[1]);
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized: No token provided' });
+    }
+    const isBlacklisted = await blacklistedTokenModel.findOne({ token: token });
+    if(isBlacklisted){
+        return res.status(401).json({message: 'Unauthorized: Token is blacklisted'});
+    }
+    try {
+        const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+        const caption = await captionModel.findById(decoded._id);
+        if (!caption) {
+            return res.status(401).json({ message: 'Unauthorized: Caption not found' });
+        }
+        req.caption = caption;
+        
+    } catch (error) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 };
